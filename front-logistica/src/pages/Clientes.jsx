@@ -11,13 +11,32 @@ function Clientes() {
   const fecharModal = () => setMostrarModal(false);
   const abrirModal = () => setMostrarModal(true);
 
-  // Dados do formulário
   const [novaEmpresa, setNovaEmpresa] = useState({
     nome: '',
     sobrenome: '',
-    cpf: '', // O seu backend usa a mesma variável para CNPJ/CPF no model
+    cpf: '', 
     email: ''
   });
+
+  const [idEmEdicao, setIdEmEdicao] = useState(null);
+
+  // FUNÇÃO NOVA: Abre a janela limpa (Novo Cadastro)
+  const abrirModalNovo = () => {
+    setNovaEmpresa({ nome: '', sobrenome: '', cpf: '', email: '' });
+    setIdEmEdicao(null); 
+    abrirModal();
+  };
+
+  const abrirModalEdicao = (cliente) => {
+    setNovaEmpresa({
+      nome: cliente.nome || '',
+      sobrenome: cliente.sobrenome || '',
+      cpf: cliente.cpf || cliente.cnpj || '',
+      email: cliente.email || ''
+    });
+    setIdEmEdicao(cliente.id); 
+    abrirModal();
+  };
 
   const carregarClientes = async () => {
     try {
@@ -51,19 +70,37 @@ function Clientes() {
   };
 
   const salvarEmpresa = async (e) => {
-    e.preventDefault(); // Evita que a página recarregue ao clicar em Salvar
+    e.preventDefault(); 
     try {
-      // Envia os dados para a rota do seu Controller Java
-      await api.post('/clientes/novo', novaEmpresa);
+      if (idEmEdicao) {
+        await api.put(`/clientes/atualizar/${idEmEdicao}`, novaEmpresa);
+        alert('Empresa atualizada com sucesso!');
+      } else {
+        // Se NÃO tem ID, é MODO CADASTRO (dispara o POST)
+        await api.post('/clientes/novo', novaEmpresa);
+        alert('Empresa cadastrada com sucesso!');
+      }
       
-      // Se der certo, fecha a janela, limpa o formulário e atualiza a tabela
       fecharModal();
-      setNovaEmpresa({ nome: '', sobrenome: '', cpf: '', email: '' });
       carregarClientes();
-      alert('Empresa cadastrada com sucesso!');
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      alert('A interface tentou salvar, mas não alcançou o Java. Verifique se o backend está rodando.');
+      alert('Erro na comunicação com o Java. Verifique se o backend está rodando.');
+    }
+  };
+  
+  const excluirCliente = async (id) => {
+    const confirmar = window.confirm('Tem certeza que deseja excluir esta empresa?');
+    
+    if (confirmar) {
+      try {
+        await api.delete(`/clientes/${id}/remover`); 
+        carregarClientes();
+        alert('Empresa excluída com sucesso!');
+      } catch (error) {
+        console.error("Erro ao excluir:", error);
+        alert('Erro ao excluir. O backend pode estar bloqueando ou a rota não existe no Java.');
+      }
     }
   };
 
@@ -75,7 +112,7 @@ function Clientes() {
     <div className="card shadow border-0 rounded-3 mt-4">
       <div className="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
         <h5 className="mb-0 fw-bold">Gerenciamento de Embarcadores</h5>
-        <button className="btn btn-success fw-bold" onClick={abrirModal}>
+        <button className="btn btn-success fw-bold" onClick={abrirModalNovo}>
           + Cadastrar Empresa
         </button>
       </div>
@@ -113,8 +150,15 @@ function Clientes() {
                     <td>{cliente.cpf || cliente.cnpj}</td>
                     <td>{cliente.email}</td>
                     <td className="text-center">
-                      <button className="btn btn-outline-primary btn-sm me-2">Editar</button>
-                      <button className="btn btn-outline-danger btn-sm">Excluir</button>
+                        <button className="btn btn-outline-primary btn-sm me-2" onClick={() => abrirModalEdicao(cliente)}>
+                            Editar
+                        </button>
+                        <button 
+                             className="btn btn-outline-danger btn-sm"
+                            onClick={() => excluirCliente(cliente.id)}
+                        >
+                            Excluir
+                         </button>
                     </td>
                   </tr>
                 ))

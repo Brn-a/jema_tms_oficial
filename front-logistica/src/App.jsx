@@ -1,6 +1,6 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { useState } from 'react';
-import { Toaster } from 'react-hot-toast'; // Importação do Toast
+import { Toaster } from 'react-hot-toast'; 
 import Clientes from './pages/Clientes';
 import Motoristas from './pages/Motoristas';
 import Caminhoes from './pages/Caminhoes';

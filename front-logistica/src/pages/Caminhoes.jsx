@@ -19,6 +19,25 @@ function Caminhoes() {
     tipo: 'TRUCK' // Valor padrão ligado ao Enum do seu backend
   });
 
+  const [idEmEdicao, setIdEmEdicao] = useState(null);
+
+  const abrirModalNovo = () => {
+    setNovoCaminhao({ tipo: '', placa: '', modelo: '', marca: '' }); 
+    setIdEmEdicao(null); 
+    abrirModal();
+  };
+
+  const abrirModalEdicao = (caminhao) => {
+    setNovoCaminhao({
+      tipo: caminhao.tipo || '',
+      placa: caminhao.placa || '',
+      marca: caminhao.marca || '',
+      modelo: caminhao.modelo || ''
+    });
+    setIdEmEdicao(caminhao.id); 
+    abrirModal();
+  };
+
   const carregarCaminhoes = async () => {
     try {
       const response = await api.get('/caminhoes/todos');
@@ -30,19 +49,20 @@ function Caminhoes() {
 
   const lidarComBusca = async (e) => {
     const valor = e.target.value;
-    setBusca(valor);
+    setBusca(valor); 
 
     if (valor.trim() === '') {
-      carregarCaminhoes();
-      return;
+      carregarCaminhoes(); 
+      return; 
     }
 
+   
     try {
-      // Supondo rota de busca parametrizada por placa ou modelo
-      const response = await api.get(`/caminhoes/busca/${valor}`);
-      setCaminhoes(response.data);
+      const response = await api.get(`/caminhoes/placa/${valor}`);
+      setCaminhoes(response.data); // Atualiza a tabela com o filtro
     } catch (error) {
-      console.error("Erro ao filtrar caminhões:", error);
+      console.error("Erro ao filtrar:", error);
+      setCaminhoes([]); // Se der erro ou não achar, limpa a tabela
     }
   };
 
@@ -52,16 +72,36 @@ function Caminhoes() {
   };
 
   const salvarCaminhao = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); 
     try {
-      await api.post('/caminhoes/novo', novoCaminhao);
+      if (idEmEdicao) {
+       
+        await api.put(`/caminhoes/atualizar/${idEmEdicao}`, novoCaminhao);
+        alert('Caminhão atualizado com sucesso!');
+      } else {
+        await api.post('/caminhoes/novo', novoCaminhao);
+        alert('Caminhão cadastrado com sucesso!');
+      }
+      
       fecharModal();
-      setNovoCaminhao({ placa: '', modelo: '', marca: '', tipo: 'TRUCK' });
-      carregarCaminhoes();
-      alert('Caminhão cadastrado com sucesso!');
+      carregarCaminhoes(); 
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      alert('Tentativa de salvar realizada. Verifique se o backend está rodando.');
+      alert('Erro ao salvar. Verifique o console.');
+    }
+  };
+
+  const excluirCaminhao = async (id) => {
+    const confirmar = window.confirm('Tem certeza que deseja excluir este veículo da frota?');
+    if (confirmar) {
+      try {
+        await api.delete(`/caminhoes/${id}`); 
+        carregarCaminhoes();
+        alert('Veículo excluído com sucesso!');
+      } catch (error) {
+        console.error("Erro ao excluir veículo:", error);
+        alert('Erro ao excluir. O backend pode estar bloqueando ou a rota não existe no Java.');
+      }
     }
   };
 
@@ -73,7 +113,7 @@ function Caminhoes() {
     <div className="card shadow border-0 rounded-3 mt-4">
       <div className="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
         <h5 className="mb-0 fw-bold">Gerenciamento da Frota (Caminhões)</h5>
-        <button className="btn btn-success fw-bold" onClick={abrirModal}>
+        <button className="btn btn-success fw-bold" onClick={abrirModalNovo}>
           + Cadastrar Veículo
         </button>
       </div>
@@ -109,8 +149,8 @@ function Caminhoes() {
                     <td>{caminhao.marca} {caminhao.modelo}</td>
                     <td><span className="badge bg-info text-dark">{caminhao.tipo}</span></td>
                     <td className="text-center">
-                      <button className="btn btn-outline-primary btn-sm me-2">Editar</button>
-                      <button className="btn btn-outline-danger btn-sm">Excluir</button>
+                      <button className="btn btn-outline-primary btn-sm me-2" onClick={() => abrirModalEdicao(caminhao)}>Editar</button>
+                      <button className="btn btn-outline-danger btn-sm" onClick={() => excluirCaminhao(caminhao.id)}> Excluir</button>
                     </td>
                   </tr>
                 ))

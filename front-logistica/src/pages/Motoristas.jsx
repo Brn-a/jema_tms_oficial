@@ -11,7 +11,6 @@ function Motoristas() {
   const fecharModal = () => setMostrarModal(false);
   const abrirModal = () => setMostrarModal(true);
 
-  // Estado atualizado exatamente com as colunas do seu banco de dados
   const [novoMotorista, setNovoMotorista] = useState({
     nome: '', 
     sobrenome: '',
@@ -22,9 +21,34 @@ function Motoristas() {
     telefone: '',
     telefone_responsavel: '',
     observacoes_saude: '',
-    horario_disponivel: '',
-    fk_caminhao: ''
+    horario_disponivel: ''
   });
+
+  const [idEmEdicao, setIdEmEdicao] = useState(null);
+
+  const abrirModalNovo = () => {
+    
+    setNovoMotorista({ nome: '', cnh: '', telefone: '' }); 
+    setIdEmEdicao(null); 
+    abrirModal();
+  };
+
+  const abrirModalEdicao = (motorista) => {
+    setNovoMotorista({
+      nome: motorista.nome || '',
+      sobrenome: motorista.sobrenome || '',
+      cnh: motorista.cnh || '',
+      rg: motorista.rg || '',
+      cpf: motorista.cpf || '',
+      genero: motorista.genero || '',
+      telefoneResponsavel: motorista.telefoneResponsavel || '',
+      observacoes_saude: motorista.observacoes_saude || '',
+      horario_disponivel: motorista.horario_disponivel || '',
+      telefone: motorista.telefone || ''
+    });
+    setIdEmEdicao(motorista.id); 
+    abrirModal();
+  };
 
   const carregarMotoristas = async () => {
     try {
@@ -43,10 +67,13 @@ function Motoristas() {
       return;
     }
     try {
-      const response = await api.get(`/motoristas/nome/${valor}`);
-      setMotoristas(response.data);
+      const response = await api.get(`/motoristas/cpf/${valor}`);
+      
+      setMotoristas(response.data); 
+      
     } catch (error) {
       console.error("Erro ao filtrar:", error);
+      setMotoristas([]);
     }
   };
 
@@ -56,23 +83,36 @@ function Motoristas() {
   };
 
   const salvarMotorista = async (e) => {
-    e.preventDefault();
-    const toastId = toast.loading('Salvando motorista...');
-    
+    e.preventDefault(); 
     try {
-      await api.post('/motoristas/novo', novoMotorista);
+      if (idEmEdicao) {
+        await api.put(`/motoristas/atualizar/${idEmEdicao}`, novoMotorista);
+        alert('Motorista atualizado com sucesso!');
+      } else {
+        // MODO NOVO CADASTRO: Dispara o POST
+        await api.post('/motoristas/novo', novoMotorista);
+        alert('Motorista cadastrado com sucesso!');
+      }
+      
       fecharModal();
-      // Limpa os campos após salvar
-      setNovoMotorista({ 
-        nome: '', sobrenome: '', cpf: '', rg: '', genero: '', cnh: '', 
-        telefone: '', telefone_responsavel: '', observacoes_saude: '', 
-        horario_disponivel: '', fk_caminhao: '' 
-      });
-      carregarMotoristas();
-      toast.success('Motorista cadastrado com sucesso!', { id: toastId });
+      carregarMotoristas(); 
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      toast.error('Erro ao salvar. Verifique se o backend está rodando.', { id: toastId });
+      alert('Erro na comunicação com o Java. Verifique o console.');
+    }
+  };
+ 
+  const excluirMotorista = async (id) => {
+    const confirmar = window.confirm('Tem certeza que deseja excluir este motorista?');
+    if (confirmar) {
+      try {
+        await api.delete(`/motoristas/${id}`); 
+        carregarMotoristas(); 
+        alert('Motorista excluído com sucesso!');
+      } catch (error) {
+        console.error("Erro ao excluir motorista:", error);
+        alert('Erro ao excluir. Verifique se o backend permite deletar este registro.');
+      }
     }
   };
 
@@ -84,7 +124,7 @@ function Motoristas() {
     <div className="card shadow border-0 rounded-3 mt-4">
       <div className="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
         <h5 className="mb-0 fw-bold">Gerenciamento de Motoristas</h5>
-        <button className="btn btn-success fw-bold" onClick={abrirModal}>
+        <button className="btn btn-success fw-bold" onClick={abrirModalNovo}>
           + Cadastrar Motorista
         </button>
       </div>
@@ -94,7 +134,7 @@ function Motoristas() {
           <input
             type="text"
             className="form-control form-control-lg border-secondary-subtle shadow-sm"
-            placeholder="🔍 Buscar motorista por nome..."
+            placeholder="🔍 Buscar motorista por CPF..."
             value={busca}
             onChange={lidarComBusca}
           />
@@ -122,8 +162,12 @@ function Motoristas() {
                     <td>{motorista.cnh}</td>
                     <td>{motorista.telefone}</td>
                     <td className="text-center">
-                      <button className="btn btn-outline-primary btn-sm me-2">Editar</button>
-                      <button className="btn btn-outline-danger btn-sm">Excluir</button>
+                      <button className="btn btn-outline-primary btn-sm me-2" onClick={() => abrirModalEdicao(motorista)}>
+                        Editar
+                      </button>
+                      <button className="btn btn-outline-danger btn-sm" onClick={() => excluirMotorista(motorista.id)}>
+                        Excluir
+                      </button>
                     </td>
                   </tr>
                 ))
